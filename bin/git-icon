@@ -1,0 +1,52 @@
+#!/bin/zsh
+# Copyright 2024 Erik Ben Heckman <erik@heckman.ca>
+# SPDX-License-Identifier: MIT
+
+
+# git-icon  v0.1.0   <https://git.heckman.ca/git-icon>
+
+
+# set or reset the icon for folders containing a .git subdirectory.
+# requires: fd, fileicon
+
+readonly git_icon="$XDG_DATA_HOME/icons/git.svg"
+
+usage(){ cat <<EOF
+
+usage: git-icon set [dir...]
+       git-icon reset [dir...]
+
+Recursively set or unset the folder-icon of specified directories, and their
+descendents, that look like git repositories. If no directories are specified,
+the current working directory and its descencents are searched.
+
+Directories "look like git repositories" if they contain a .git subdirectory.
+
+Setting the icon changes it to '$XDG_DATA_HOME/icons/git.svg'.
+Resetting it reverts it to the default folder icon.
+
+EOF
+}
+
+version(){
+	awk '/v[0-9]+.[0-9]+.[0-9]+/{print $3; exit}' $ZSH_SCRIPT
+}
+
+main(){
+	case ${1:-} in
+	-h|--help) usage; return 0 ;;
+	-v|--version) version; return 0 ;;
+	set) action=(set '{//}' $git_icon) ;;
+	reset|unset|clear|remove|revert|undo) action=(remove '{//}') ;;
+	*) usage >&2; return 64 ;;
+	esac
+	shift
+	fd --hidden --type directory --glob '.git' --case-sensitive --prune \
+		--exec fileicon "${action[@]}" \; \
+		"$@" |
+	sed "s/' based on '.*$/'/;s/^Custom/Git/"
+}
+
+set -euo pipefail
+
+main "$@"
